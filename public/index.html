@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<script type="text/javascript" src="jquery-3.4.1.min.js"></script>
+	<script>
+		$(document).ready(function () {
+			$('select').formSelect();
+			$('.timepicker').timepicker();
+		});
+	</script>
+	<!-- The core Firebase JS SDK is always required and must be listed first -->
+	<script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-app.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-firestore.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-auth.js"></script>
+	<!-- google css framework called materialieze -->
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+	<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+	<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous" />
+
+
+	<!-- socket.io configration -->
+	<script src="/socket.io/socket.io.js"></script>
+
+	<!-- pubnub sdk -->
+	<script src="https://cdn.pubnub.com/sdk/javascript/pubnub.4.20.2.js"></script>
+
+	<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB2y7uTXE2b9qysoJXpO4XdiAkWe9Qd55E&libraries=drawing"
+		async defer></script>
+	<link rel="stylesheet" href="css/styles.css">
+	<!-- Chart.jscdns -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js"
+		integrity="sha512-s+xg36jbIujB2S2VKfpGmlC3T5V2TF3lY48DX7u2r9XzGzgPsa6wTpOQA7J9iffvdeBN0q9tKzRxVxw1JviZPg=="
+		crossorigin="anonymous"></script>
+
+	<!-- socket.io to send and recive data between server and front page -->
+	<script>
+		const socket = io()
+		var test
+		var test2
+		var marker
+		var temperature
+		var humidity
+		var sensorsLocation //= [[32.881427, 13.226611], [32.881502, 13.226586]]
+		var soilStatus
+		var sensorIDs //= [12,55]
+		var dateToday
+		var map
+		var pyData = []
+		var UserIN = ''
+
+		//  DHT = [temperature, humidity, flag,
+		// soilStatus, location, channelName, dateToday, reqFlag]
+		socket.on('some', (socket) => {
+			if (socket[3] == UserIN) {
+			
+				pyData = socket
+				
+				soilStatus = socket[1]
+				// console.log('soil reads : ',soilStatus)
+
+				sensorsLocation = socket[2]
+				sensorIDs = socket[4]
+
+				dateToday = socket[5]
+
+			}
+		})
+	</script>
+	<title>Plant IoT</title>
+</head>
+
+<body>
+	<!-- NAVBAR -->
+	<nav id="nav-color" class="z-depth-0 nav-transparent">
+		<div class="nav-wrapper container">
+			<a href="#" class="brand-logo ">
+				<!-- <img src="img/logo.svg" style="width: 50px; margin-top: 10px;"> -->
+				<span class="logo-title"><b>Smart</b><span> Irrigation System </span></span>
+			</a>
+			<ul id="nav-mobile" class="hide-on-med-and-down">
+				<li class="logged-in" style="display: none;">
+					<a href="#" class="modal-trigger" data-target="modal-account">Account</a>
+				</li>
+				<li class="logged-in" style="display: none;">
+					<a href="#" class="" id="logout">Logout</a>
+				</li>
+				<li class="logged-out" style="display: none;">
+					<a href="#" class="modal-trigger" data-target="modal-login">Login</a>
+				</li>
+				<li class="logged-out" style="display: none;">
+					<a href="#" class="modal-trigger" data-target="modal-signup">Sign up</a>
+				</li>
+				</span>
+			</ul>
+		</div>
+	</nav>
+	<!-- SIGN UP MODAL -->
+	<div id="modal-signup" class="modal">
+		<div class="modal-content">
+			<h4>Sign up</h4><br />
+			<form id="signup-form">
+				<div class="input-field">
+					<input type="email" id="signup-email" required />
+					<label for="signup-email">Email address</label>
+				</div>
+				<div class="input-field">
+					<input type="password" id="signup-password" required />
+					<label for="signup-password">Choose password</label>
+				</div>
+				<button class="btn darken-2 z-depth-0">Sign up</button>
+			</form>
+		</div>
+	</div>
+	<!-- LOGIN MODAL -->
+	<div id="modal-login" class="modal">
+		<div class="modal-content">
+			<h4>Login</h4><br />
+			<form id="login-form">
+				<div class="input-field">
+					<input type="email" id="login-email" required />
+					<label for="login-email">Email address</label>
+				</div>
+				<div class="input-field">
+					<input type="password" id="login-password" required />
+					<label for="login-password">Your password</label>
+				</div>
+				<p id = 'error-password' style="display: none;"></p>
+				<button class="btn darken-2 z-depth-0">Login</button>
+			</form>
+		</div>
+	</div>
+	<!-- ACCOUNT MODAL -->
+	<div id="modal-account" class="modal">
+		<div class="modal-content center-align">
+			<h4>Account details</h4><br />
+			<div class="account-details"></div>
+		</div>
+	</div>
+	<!-- this is div container -->
+	<div id="user-content" class="container" style="display: none;">
+		<!-- <h1 class="center-align">IoT Plant</h1> -->
+		<!-- <br>
+		<br> -->
+		<!-- <h4>System Control</h4>
+		<button type="button" class="btn yellow waves-effect waves-red darken-2 z-depth-0"
+			onclick="publish('ON',UserIN)">Auto
+			Mode ON</button>
+		<button type="button" class="btn yellow waves-effect waves-red darken-2 z-depth-0"
+			onclick="publish('OFF',UserIN)">Auto
+			Mode OFF</button>
+		<button type="button" class="btn yellow waves-effect waves-red darken-2 z-depth-0"
+			onclick="publish('WATER',UserIN)">Water Plant</button>
+		<hr> -->
+		<div id="panel">
+			<div id="outer">
+				<!-- ********************************************************************************************************************* -->
+				<div id="irrigation-modal" class="modal">
+					<div class="modal-content">
+						<h4>irrigation area</h4><br />
+						<form id="irrigation-form">
+							<div class="input-field col s12 m6">
+								<input id="plantType" list="recommendation" placeholder="Enter yor plant type" required>
+								<datalist id="recommendation">
+
+								</datalist>
+							</div>
+							<fieldset id="intro-box" style="display: none;">
+								<legend>Some information:</legend>
+								<p id="intro"></p>
+							</fieldset>
+
+							<div class="input-field col s12 m6">
+								<select id="selected-data" multiple>
+									<option value="" disabled>Choose your Irrigation days</option>
+									<option value="1">SUN</option>
+									<option value="2">MON</option>
+									<option value="3">TUE</option>
+									<option value="1">WED</option>
+									<option value="2">THU</option>
+									<option value="3">FRI</option>
+									<option value="3">SAT</option>
+								</select>
+
+							</div>
+							<input id="timePicked" type="text" class="timepicker"
+								placeholder="Enter your Irrigation Time" required>
+							<input type="number" id="duration" placeholder="set duration" min="1" max="60" required>
+							<button class="btn waves-effect waves-red darken-2 z-depth-0">Ok</button>
+						</form>
+					</div>
+				</div>
+
+				<div id="link-modal" class="modal">
+					<div class="modal-content">
+						<h4>Link with Sensors</h4><br />
+						<form id="link-form">
+							<div class="input-field col s12 m6">
+								<input id="sensors" list="link" placeholder="select sensor" required>
+								<datalist id="link">
+								</datalist>
+							</div>
+							<button class="btn waves-effect waves-red darken-2 z-depth-0">Ok</button>
+						</form>
+					</div>
+				</div>
+
+
+				<!-- ********************************************************************************************************************* -->
+
+
+			</div>
+		</div>
+		<div class="">
+			<div class="card horizontal">
+				<div class="card-image">
+					<div class="collection with-header" style="list-style: none;">
+						<li class="collection-header">
+							<h4>System Control</h4></a>
+
+							<a href="#!" onclick="publish('ON',UserIN)" class="collection-item">
+								Auto Mode ON</a>
+							<a href="#!" onclick="publish('OFF',UserIN)" class="collection-item">Auto Mode OFF</a>
+							<!-- <a href="#!" class="collection-item" onclick="publish('WATER',UserIN)">Water Plant</a> -->
+					</div>
+					<br>
+					<div class="collection with-header" style="list-style: none;">
+						<li class="collection-header">
+							<h4>Map control</h4></a>
+
+							<a href="#!" id="link-data" data-target="link-modal"
+								class="modal-trigger collection-item">link
+								with sensors</a>
+							<a href="#!" id="irrigation-data" data-target="irrigation-modal"
+								class="modal-trigger collection-item">Irrigation Schadule</a>
+							<a href="#!" id="delete-button" class="collection-item">Delete Selected Shape</a>
+							<a href="#!" id="save-button" class="collection-item">Save</a>
+					</div>
+					<br>
+					<div class="" style="margin-left: 20px;">
+						<a id="history-btn" class="waves-effect waves-light btn-large">History</a></div>
+				</div>
+				<div class="card-stacked">
+					<div class="card-content">
+						<div id="mapArea">
+						</div>
+					</div>
+					
+					<div class="card-action" id="history-card" style="display: none;">
+						<div id="history-container">
+							<!-- <button id="history-btn"
+								class="btn yellow waves-effect waves-red darken-2 z-depth-0">History</button> -->
+							<br>
+							
+							<br>
+							<div id="canvas">
+							</div>
+							<br>
+							<br>
+							<div id="forwardBackward-btn">
+								<a id="backward-btn" class="waves-effect waves-light btn">Backward</a>
+								<a id="forward-btn" class="waves-effect waves-light btn">Forward</a>
+								<!-- <button id="backward-btn"
+									class="btn yellow waves-effect waves-red darken-2 z-depth-0">Backward</button>
+								<button id="forward-btn"
+									class="btn yellow waves-effect waves-red darken-2 z-depth-0">Forward</button> -->
+							</div>
+						</div>
+					</div>
+					<canvas id="AChart"></canvas>
+					
+						
+					
+				</div>
+			</div>
+		</div>
+
+		<!-- here plot history data -->
+		<!-- <div id="history-container">
+			<button id="history-btn" class="btn yellow waves-effect waves-red darken-2 z-depth-0">History</button>
+			<br>
+			<br>
+			<div id="canvas">
+
+			</div>
+			<br>
+			<br>
+			<div id="forwardBackward-btn">
+				<button id="backward-btn" class="btn yellow waves-effect waves-red darken-2 z-depth-0">Backward</button>
+				<button id="forward-btn" class="btn yellow waves-effect waves-red darken-2 z-depth-0">Forward</button>
+			</div>
+		</div> -->
+		<!-- ------------------------------- -->
+	</div>
+	<div id="whenLogOut" style="display: none; text-align: center;">
+		<div class="overlay absulote-contain"></div>
+		<div id="introduction" class="absulote-contain">
+			<h1>Welcome To Smart Irrigation System</h1>
+			<!-- <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque id sapien ex. Nullam ut fermentum ipsum.
+				Phasellus lectus dolor, pharetra vel neque nec, congue dictum sem. Integer auctor ut purus eget rutrum.
+				Morbi vestibulum pellentesque quam, feugiat faucibus diam convallis vel. Curabitur ultrices, mi non
+				dignissim mattis, nunc metus rutrum massa, at vulputate nunc elit nec mi. Mauris porttitor massa eget
+				dui accumsan interdum. Sed eleifend euismod erat hendrerit molestie. Nunc suscipit dui libero, eu porta
+				magna interdum eu.</p> -->
+		</div>
+		<div class="footer">
+			<div class="footer-block">
+				<span>
+					<i class="material-icons">location_on
+			  </i>
+			  </span>
+			  <span>
+				  alhani - Tripoli - libya
+			  </span>	
+			</div>
+			<div class="footer-block">				
+				<span>
+					<i class="material-icons">local_post_office
+			  </i>
+			  </span>
+			  <span>
+				  elbunim@gmail.com
+			  </span>	
+					</div>
+			<div class="footer-block">				
+				<span>
+					  <i class="material-icons">local_phone
+				</i>
+				</span>
+				<span>
+					+218 92 231 32 76
+				</span>
+			</div>
+			<div class="footer-block">
+				<span class="contact">
+					Contact With Us
+				</span>
+				<div class="social-media">
+						  <a href="#" class="social-color-facebook"><i class="fa fa-facebook" aria-hidden="true"></i></a>
+						  <a href="#" class="social-color-twitter"><i class="fa fa-twitter" aria-hidden="true"></i></a>
+						  <a href="#" class="social-color-youtube"><i class="fa fa-youtube" aria-hidden="true"></i></a>
+						  <a href="#" class="social-color-linkedin"><i class="fa fa-linkedin" aria-hidden="true"></i></a>
+						  <a href="#" class="social-color-instagram"><i class="fa fa-instagram" aria-hidden="true"></i></a>
+					  </ul>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		var pubnub = new PubNub({
+			publishKey: 'pub-c-207cc150-5166-4d6f-b5c8-69ad7b50f894',
+			subscribeKey: 'sub-c-b3c32d9e-2321-11ea-894a-b6462cb07a90',
+		});
+
+		function publish(a, userChannel) {
+
+			console.log('iam in publish index')
+			var publishConfig = {
+				channel: userChannel.split('.')[0],
+				message: a
+			};
+			pubnub.publish(publishConfig, function (status, response) {
+				// console.log(status, response);
+			});
+		}
+	</script>
+
+	<!-- firebase configration -->
+	<script>
+		// Your web app's Firebase configuration
+		var firebaseConfig = {
+			apiKey: "AIzaSyAxvBuB-wLFLhgQPub9V4usfiMbNR90Wjk",
+			authDomain: "iot-plant-e048f.firebaseapp.com",
+			databaseURL: "https://iot-plant-e048f.firebaseio.com",
+			projectId: "iot-plant-e048f",
+			storageBucket: "iot-plant-e048f.appspot.com",
+			messagingSenderId: "777056078665",
+			appId: "1:777056078665:web:f225708cd8934bfb936898",
+			measurementId: "G-HVBJBK6FJ8"
+		};
+		// Initialize Firebase
+		firebase.initializeApp(firebaseConfig);
+		// make auth and firestore refrences
+		const auth = firebase.auth()
+		const db = firebase.firestore()
+		// update firestore settings
+		// db.settings({
+		// 	timestampsInSnapshots: true
+		// })
+	</script>
+	<!-- init Map  -->
+	<script src="./js/initMap.js"></script>
+	<!-- materialize framework -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+	<!-- google map api key -->
+	<!-- <script async defer
+		src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB2y7uTXE2b9qysoJXpO4XdiAkWe9Qd55E&callback=initMap">
+	</script> -->
+	<script src="js/index.js"></script>
+	<script src="js/auth.js"></script>
+
+</body>
+
+</html>
