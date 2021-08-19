@@ -13,11 +13,11 @@ const port = process.env.PORT || 4000
 
 // config service Account to make connection between server and firebase firestore database
 var admin = require("firebase-admin");
-var serviceAccount = require("./iot-plant-e048f-firebase-adminsdk-cfmld-3d1420031c.json");
+var serviceAccount = require("./iot-plant-e048f-firebase-adminsdk-cfmld-########.json");
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    databaseURL: "https://iot-plant-e048f.firebaseio.com"
+    databaseURL: "##############"
 });
 
 let db = admin.firestore();
@@ -28,8 +28,8 @@ const auth = admin.auth();
 var PubNub = require('pubnub')
 
 var pubnub = new PubNub({
-    publishKey: 'pub-c-207cc150-5166-4d6f-b5c8-69ad7b50f894',
-    subscribeKey: 'sub-c-b3c32d9e-2321-11ea-894a-b6462cb07a90',
+    publishKey: '###########',
+    subscribeKey: '###########',
 });
 
 
